@@ -57,7 +57,6 @@ class AIPlayer:
 
         # YOUR ALPHA-BETA CODE GOES HERE
 
-
         return best_move
 
     def get_mcts_move(self, board):
