@@ -32,6 +32,16 @@ def turn_worker(board, send_end, p_func):
 # List of symbols
 symbols = ['.', 'X', 'O']
 
+COL_COUNT = 7
+ROW_COUNT = 6
+OVAL_SIZE = 100
+
+COL_HEIGHT = COL_COUNT * OVAL_SIZE
+ROW_HEIGHT = ROW_COUNT * OVAL_SIZE
+
+global WAS_EXITED
+WAS_EXITED = False
+
 
 # This is the main game class that will store the information
 # necessary for the game to play and also run the game
@@ -57,16 +67,48 @@ class Game:
             root.title('Connect 4')
             self.player_string = tk.Label(root, text=player1.player_string)
             self.player_string.pack()
-            self.c = tk.Canvas(root, width=700, height=600)
+            self.c = tk.Canvas(root, width=COL_HEIGHT, height=ROW_HEIGHT)
             self.c.pack()
 
-            for row in range(0, 700, 100):
+            for row in range(0, COL_HEIGHT, OVAL_SIZE):
                 column = []
-                for col in range(0, 700, 100):
-                    column.append(self.c.create_oval(row, col, row + 100, col + 100, fill=''))
+                for col in range(0, ROW_HEIGHT, OVAL_SIZE):
+                    column.append(self.c.create_oval(row, col, row + OVAL_SIZE, col + OVAL_SIZE, fill=''))
+
+                    # Check if it's the bottom row to add the column number
+                    if col == ROW_HEIGHT - OVAL_SIZE:
+                        # Calculate the center of the oval
+                        center_x = row + (OVAL_SIZE // 2)
+                        center_y = col + (OVAL_SIZE // 2)
+
+                        # The column number is the current row divided by 100
+                        column_number = row // OVAL_SIZE
+
+                        # Create the text at the center of the top oval
+                        self.c.create_text(center_x, center_y, text=str(column_number))
+
                 self.gui_board.append(column)
 
+            game_settings = tk.Frame(root)
+            game_settings.pack()
+
+            tk.Button(game_settings, text='Next Game', command=root.destroy).pack(side='left')
+            tk.Button(game_settings, text='End All Games', command=lambda: [self.exit_program(), root.destroy()]).pack(
+                side='left')
+
             tk.Button(root, text='Next Move', command=self.make_move).pack()
+            button_frame = tk.Frame(root)
+            button_frame.pack()  # This packs the frame below the 'Next Move' button
+
+            human_inputs_label = tk.Label(button_frame, text='Human Inputs:')
+            human_inputs_label.pack(side='left')  # This will pack the label to the left
+
+            # Create a list of buttons to be added to the frame
+            buttons = []
+            for i in range(COL_COUNT):  # Replace number_of_buttons with how many you want
+                button = tk.Button(button_frame, text=f'Column {i}', command=lambda i=i: self.make_move(i))
+                button.pack(side='left')  # This packs each button side by side within the frame
+                buttons.append(button)
             root.mainloop()
         else:
             if interactive:
@@ -87,7 +129,11 @@ class Game:
         if self.interactive:
             print('Game is over.  Thanks for playing')
 
-    def make_move(self):
+    def exit_program(self):
+        global WAS_EXITED
+        WAS_EXITED = True
+
+    def make_move(self, val=None):
         if not self.game_over:
             current_player = self.players[self.current_turn]
 
@@ -115,7 +161,7 @@ class Game:
 
                 move = recv_end.recv()
             else:
-                move = current_player.get_move(self.board)
+                move = current_player.get_move(self.board) if val is None else val
 
             if move is not None:
                 self.update_board(int(move), current_player.player_number)
@@ -270,9 +316,9 @@ def main(player1, player2, time, n, params1, params2):
     if params2:
         p2name += params2
 
-    if p1name == p2name:
-        print('Error: players must be different or have different parameters!')
-        sys.exit()
+    # if p1name == p2name:
+    #     print('Error: players must be different or have different parameters!')
+    #     sys.exit()
 
     # Get list of player names
     pnames = [p1name, p2name]
@@ -298,6 +344,8 @@ def main(player1, player2, time, n, params1, params2):
     print(f"Playing {N} games between {p1name} and {p2name}")
 
     for i in range(N):
+        if WAS_EXITED:
+            break
         # Play game with current player list
         play_game(pnames[0], pnames[1], pstring[pnames[0]], pstring[pnames[1]], time, params[pnames[0]],
                   params[pnames[1]], interactive, stats)

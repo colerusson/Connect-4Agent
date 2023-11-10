@@ -56,8 +56,39 @@ class AIPlayer:
         best_move = np.random.choice(moves)
 
         # YOUR ALPHA-BETA CODE GOES HERE
+        alpha = 100000
+        beta = -100000
+
+        self.minimax(board, 0, alpha, beta)
 
         return best_move
+
+    def minimax(self, board, depth, alpha, beta):
+        if depth == self.depth_limit:
+            return self.evaluation_function(board)
+
+        if self.player_number == 1:
+            best_value = -100000
+            for move in get_valid_moves(board):
+                new_board = np.copy(board)
+                make_move(new_board, move, self.player_number)
+                value = self.minimax(new_board, depth + 1, alpha, beta)
+                best_value = max(best_value, value)
+                alpha = max(alpha, best_value)
+                if beta <= alpha:
+                    break
+            return best_value
+        else:
+            best_value = 100000
+            for move in get_valid_moves(board):
+                new_board = np.copy(board)
+                make_move(new_board, move, self.player_number)
+                value = self.minimax(new_board, depth + 1, alpha, beta)
+                best_value = min(best_value, value)
+                beta = min(beta, best_value)
+                if beta <= alpha:
+                    break
+            return best_value
 
     def get_mcts_move(self, board):
         """
@@ -104,16 +135,28 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-        moves = get_valid_moves(board)
-        best_move = np.random.choice(moves)
 
         # YOUR EXPECTIMAX CODE GOES HERE
-
-        return best_move
+        if self.player_number == 1:
+            best_value = -100000
+            for move in get_valid_moves(board):
+                new_board = np.copy(board)
+                make_move(new_board, move, self.player_number)
+                value = self.get_expectimax_move(new_board)
+                best_value = max(best_value, value)
+            return best_value
+        else:
+            best_value = 100000
+            for move in get_valid_moves(board):
+                new_board = np.copy(board)
+                make_move(new_board, move, self.player_number)
+                value = self.get_expectimax_move(new_board)
+                best_value = min(best_value, value)
+            return best_value
 
     def evaluation_function(self, board):
         """
-        Given the current stat of the board, return the scalar value that 
+        Given the current state of the board, return the scalar value that
         represents the evaluation function for the current player
        
         INPUTS:
@@ -131,6 +174,38 @@ class AIPlayer:
         """
 
         # YOUR EVALUATION FUNCTION GOES HERE
+        for row in board:
+            for i in range(len(row) - 3):
+                if row[i] == row[i + 1] == row[i + 2] == row[i + 3] == self.player_number:
+                    return 100000
+                elif row[i] == row[i + 1] == row[i + 2] == row[i + 3] == self.other_player_number:
+                    return -100000
+
+        for col in board.T:
+            for i in range(len(col) - 3):
+                if col[i] == col[i + 1] == col[i + 2] == col[i + 3] == self.player_number:
+                    return 100000
+                elif col[i] == col[i + 1] == col[i + 2] == col[i + 3] == self.other_player_number:
+                    return -100000
+
+        for op in [None, np.fliplr]:
+            op_board = op(board) if op else board
+
+            root_diag = np.diagonal(op_board, offset=0).astype(np.int)
+            for i in range(len(root_diag) - 3):
+                if root_diag[i] == root_diag[i + 1] == root_diag[i + 2] == root_diag[i + 3] == self.player_number:
+                    return 100000
+                elif root_diag[i] == root_diag[i + 1] == root_diag[i + 2] == root_diag[i + 3] == self.other_player_number:
+                    return -100000
+
+            for i in range(1, board.shape[1] - 3):
+                for offset in [i, -i]:
+                    diag = np.diagonal(op_board, offset=offset)
+                    if len(diag) >= 4:
+                        if diag[0] == diag[1] == diag[2] == diag[3] == self.player_number:
+                            return 100000
+                        elif diag[0] == diag[1] == diag[2] == diag[3] == self.other_player_number:
+                            return -100000
 
         return 0
 
