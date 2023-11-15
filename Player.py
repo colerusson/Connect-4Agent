@@ -52,43 +52,48 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-        moves = get_valid_moves(board)
-        best_move = np.random.choice(moves)
-
         # YOUR ALPHA-BETA CODE GOES HERE
-        alpha = 100000
-        beta = -100000
+        alpha = float('-inf')
+        beta = float('inf')
+        best_value = float('-inf')
+        best_move = None
 
-        self.minimax(board, 0, alpha, beta)
+        for move in get_valid_moves(board):
+            new_board = np.copy(board)
+            make_move(new_board, move, self.player_number)
+            value = self.alpha_beta(new_board, 0, alpha, beta, False)
+            if value > best_value:
+                best_value = value
+                best_move = move
 
         return best_move
 
-    def minimax(self, board, depth, alpha, beta):
-        if depth == self.depth_limit:
+    def alpha_beta(self, board, depth, alpha, beta, maximizing_player):
+        if depth == self.depth_limit or is_winning_state(board, self.player_number) or is_winning_state(board, self.other_player_number):
             return self.evaluation_function(board)
 
-        if self.player_number == 1:
-            best_value = -100000
-            for move in get_valid_moves(board):
+        valid_moves = get_valid_moves(board)
+
+        if maximizing_player:
+            value = float('-inf')
+            for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.player_number)
-                value = self.minimax(new_board, depth + 1, alpha, beta)
-                best_value = max(best_value, value)
-                alpha = max(alpha, best_value)
+                value = max(value, self.alpha_beta(new_board, depth + 1, alpha, beta, False))
+                alpha = max(alpha, value)
                 if beta <= alpha:
                     break
-            return best_value
+            return value
         else:
-            best_value = 100000
-            for move in get_valid_moves(board):
+            value = float('inf')
+            for move in valid_moves:
                 new_board = np.copy(board)
-                make_move(new_board, move, self.player_number)
-                value = self.minimax(new_board, depth + 1, alpha, beta)
-                best_value = min(best_value, value)
-                beta = min(beta, best_value)
+                make_move(new_board, move, self.other_player_number)
+                value = min(value, self.alpha_beta(new_board, depth + 1, alpha, beta, True))
+                beta = min(beta, value)
                 if beta <= alpha:
                     break
-            return best_value
+            return value
 
     def get_mcts_move(self, board):
         """
@@ -137,22 +142,41 @@ class AIPlayer:
         """
 
         # YOUR EXPECTIMAX CODE GOES HERE
-        if self.player_number == 1:
-            best_value = -100000
-            for move in get_valid_moves(board):
+        best_value = float('-inf') if self.player_number == 1 else float('inf')
+        best_move = None
+
+        for move in get_valid_moves(board):
+            new_board = np.copy(board)
+            make_move(new_board, move, self.player_number)
+            value = self.expectimax(new_board, 0,
+                                    False)  # Call expectimax with maximizing_player=False for opponent's turn
+            if (self.player_number == 1 and value > best_value) or (self.player_number == 2 and value < best_value):
+                best_value = value
+                best_move = move
+
+        return best_move
+
+    def expectimax(self, board, depth, maximizing_player):
+        if depth == self.depth_limit or is_winning_state(board, self.player_number) or is_winning_state(board, self.other_player_number):
+            return self.evaluation_function(board)
+
+        valid_moves = get_valid_moves(board)
+
+        if maximizing_player:
+            value = float('-inf')
+            for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.player_number)
-                value = self.get_expectimax_move(new_board)
-                best_value = max(best_value, value)
-            return best_value
+                value = max(value, self.expectimax(new_board, depth + 1, False))  # Switch to opponent's turn
+            return value
         else:
-            best_value = 100000
-            for move in get_valid_moves(board):
+            total_value = 0
+            for move in valid_moves:
                 new_board = np.copy(board)
-                make_move(new_board, move, self.player_number)
-                value = self.get_expectimax_move(new_board)
-                best_value = min(best_value, value)
-            return best_value
+                make_move(new_board, move, self.other_player_number)  # Opponent's move
+                total_value += self.expectimax(new_board, depth + 1, True)  # Switch to AI's turn
+
+            return total_value / len(valid_moves) # Average value for opponent's moves
 
     def evaluation_function(self, board):
         """
@@ -191,7 +215,7 @@ class AIPlayer:
         for op in [None, np.fliplr]:
             op_board = op(board) if op else board
 
-            root_diag = np.diagonal(op_board, offset=0).astype(np.int)
+            root_diag = np.diagonal(op_board, offset=0).astype(int)
             for i in range(len(root_diag) - 3):
                 if root_diag[i] == root_diag[i + 1] == root_diag[i + 2] == root_diag[i + 3] == self.player_number:
                     return 100000
@@ -466,14 +490,14 @@ def is_winning_state(board, player_num):
         for op in [None, np.fliplr]:
             op_board = op(b) if op else b
 
-            root_diag = np.diagonal(op_board, offset=0).astype(np.int)
+            root_diag = np.diagonal(op_board, offset=0).astype(int)
             if player_win_str in to_str(root_diag):
                 return True
 
             for i in range(1, b.shape[1] - 3):
                 for offset in [i, -i]:
                     diag = np.diagonal(op_board, offset=offset)
-                    diag = to_str(diag.astype(np.int))
+                    diag = to_str(diag.astype(int))
                     if player_win_str in diag:
                         return True
 
