@@ -149,7 +149,7 @@ class AIPlayer:
             new_board = np.copy(board)
             make_move(new_board, move, self.player_number)
             value = self.expectimax(new_board, 0,
-                                    False)  # Call expectimax with maximizing_player=False for opponent's turn
+                                    False)
             if (self.player_number == 1 and value > best_value) or (self.player_number == 2 and value < best_value):
                 best_value = value
                 best_move = move
@@ -167,16 +167,16 @@ class AIPlayer:
             for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.player_number)
-                value = max(value, self.expectimax(new_board, depth + 1, False))  # Switch to opponent's turn
+                value = max(value, self.expectimax(new_board, depth + 1, False))
             return value
         else:
             total_value = 0
             for move in valid_moves:
                 new_board = np.copy(board)
                 make_move(new_board, move, self.other_player_number)  # Opponent's move
-                total_value += self.expectimax(new_board, depth + 1, True)  # Switch to AI's turn
+                total_value += self.expectimax(new_board, depth + 1, True)
 
-            return total_value / len(valid_moves) # Average value for opponent's moves
+            return total_value / len(valid_moves)
 
     def evaluation_function(self, board):
         """
